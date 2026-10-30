@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:dc="http://purl.org/dc/terms/"
+      xmlns:opds="http://opds-spec.org/2010/catalog"
+      xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">
+  <title>bookorbit OPDS Catalog</title>
+  <id>urn:bookorbit:root</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <link rel="self" href="/api/v1/opds" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+  <link rel="start" href="/api/v1/opds" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+  <link rel="search" href="/api/v1/opds/search.opds" type="application/opensearchdescription+xml"/>
+  <link rel="search" href="/api/v1/opds/catalog?q={searchTerms}" type="application/atom+xml" title="Search"/>
+<entry>
+  <title>All Books</title>
+  <id>urn:bookorbit:all</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <content type="text">Browse the full catalog</content>
+  <link rel="subsection" href="/api/v1/opds/catalog" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+</entry>
+<entry>
+  <title>Recent Books</title>
+  <id>urn:bookorbit:recent</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <content type="text">Recently added books</content>
+  <link rel="subsection" href="/api/v1/opds/recent" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+</entry>
+<entry>
+  <title>Random Books</title>
+  <id>urn:bookorbit:surprise</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <content type="text">25 random picks</content>
+  <link rel="subsection" href="/api/v1/opds/surprise" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+</entry>
+<entry>
+  <title>Libraries</title>
+  <id>urn:bookorbit:libraries</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <content type="text">Browse by library</content>
+  <link rel="subsection" href="/api/v1/opds/libraries" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+</entry>
+<entry>
+  <title>Collections</title>
+  <id>urn:bookorbit:collections</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <content type="text">Browse your collections</content>
+  <link rel="subsection" href="/api/v1/opds/collections" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+</entry>
+<entry>
+  <title>SmartScopes</title>
+  <id>urn:bookorbit:smartScopes</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <content type="text">Browse your smartScopes</content>
+  <link rel="subsection" href="/api/v1/opds/smart-scopes" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+</entry>
+<entry>
+  <title>Authors</title>
+  <id>urn:bookorbit:authors</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <content type="text">Browse by author</content>
+  <link rel="subsection" href="/api/v1/opds/authors" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+</entry>
+<entry>
+  <title>Series</title>
+  <id>urn:bookorbit:series</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <content type="text">Browse by series</content>
+  <link rel="subsection" href="/api/v1/opds/series" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+</entry>
+</feed>

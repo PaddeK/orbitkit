@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:dc="http://purl.org/dc/terms/"
+      xmlns:opds="http://opds-spec.org/2010/catalog"
+      xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">
+  <title>Authors</title>
+  <id>urn:bookorbit:authors</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <link rel="self" href="/api/v1/opds/authors" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+  <link rel="search" href="/api/v1/opds/search.opds" type="application/opensearchdescription+xml"/>
+  <link rel="search" href="/api/v1/opds/catalog?q={searchTerms}" type="application/atom+xml" title="Search"/>
+<entry>
+  <title>Melville, Herman</title>
+  <id>urn:bookorbit:author:Melville%2C%20Herman</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <content type="text">1 books</content>
+  <link rel="subsection" href="/api/v1/opds/catalog?author=Melville%2C%20Herman" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+</entry>
+</feed>

@@ -1,0 +1,50 @@
+# Add orbitkit to the stack that runs BookOrbit. Turn on the features you want and fill in their settings,
+# or keep the secrets in a .env file next to this one. Everything else is optional, see the README.
+services:
+  orbitkit:
+    image: ghcr.io/paddek/orbitkit:latest
+    restart: unless-stopped
+    ports:
+      - "8601:8601" # OPDS Proxy
+      - "8602:8602" # EPUB Check report pages
+    volumes:
+      - orbitkit-data:/data
+      # Only to replace books in the library (EPUB_CHECK_REPLACE_IN_LIBRARY): the same mount as BookOrbit's
+      # - /path/to/books:/books
+    environment:
+      # BookOrbit, as orbitkit reaches it; in the same stack, its service name
+      BOOKORBIT_URL: http://bookorbit:3000
+      # Where your browser reaches BookOrbit, for links
+      BOOKORBIT_PUBLIC_URL: https://books.example.org
+      # A BookOrbit web login, used by EPUB Check (see the README for its permissions)
+      BOOKORBIT_USER: ${BOOKORBIT_USER}
+      BOOKORBIT_PASSWORD: ${BOOKORBIT_PASSWORD}
+
+      # EPUB Check
+      EPUB_CHECK_ENABLED: "true"
+      # "true": check, but write nothing to BookOrbit yet
+      EPUB_CHECK_DRY_RUN: "false"
+      # Where your browser reaches the report pages; linked from each book in BookOrbit
+      EPUB_CHECK_REPORT_URL: http://192.168.1.10:8602
+      # EPUB_CHECK_FIXES: "true"
+      # EPUB_CHECK_EPUBLIFT: "true"
+      # EPUB_CHECK_REPLACE_IN_LIBRARY: "true"
+
+      # PocketBook Sync
+      POCKETBOOK_SYNC_ENABLED: "true"
+      # "true": log the progress it would send instead of sending it
+      POCKETBOOK_SYNC_DRY_RUN: "false"
+      POCKETBOOK_SYNC_EMAIL: ${POCKETBOOK_SYNC_EMAIL}
+      POCKETBOOK_SYNC_PASSWORD: ${POCKETBOOK_SYNC_PASSWORD}
+      # The credentials from Settings > KOReader in BookOrbit
+      POCKETBOOK_SYNC_KOREADER_USER: ${POCKETBOOK_SYNC_KOREADER_USER}
+      POCKETBOOK_SYNC_KOREADER_PASSWORD: ${POCKETBOOK_SYNC_KOREADER_PASSWORD}
+      POCKETBOOK_SYNC_DEVICE_NAME: PocketBook Era Color
+
+      # OPDS Proxy; set it up at http://<docker-host>:8601/admin
+      OPDS_PROXY_ENABLED: "true"
+      # Code for its first-start setup page; generate one with: openssl rand -hex 8
+      OPDS_PROXY_SETUP_CODE: ""
+
+volumes:
+  orbitkit-data:

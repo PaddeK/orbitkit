@@ -1,0 +1,28 @@
+# Monthly pull requests for new versions, one per ecosystem; CI tests each before merging
+version: 2
+updates:
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+          interval: monthly
+      groups:
+          actions:
+              patterns: ["*"]
+
+    # Base images in the Dockerfile (oven/bun for the build, distroless for the runtime)
+    - package-ecosystem: docker
+      directory: /
+      schedule:
+          interval: monthly
+      groups:
+          docker:
+              patterns: ["*"]
+
+    # Dev dependencies, epubveri and epubsana; CI tests each before merging
+    - package-ecosystem: bun
+      directory: /
+      schedule:
+          interval: monthly
+      groups:
+          dependencies:
+              patterns: ["*"]

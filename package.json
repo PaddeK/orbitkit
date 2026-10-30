@@ -1,0 +1,25 @@
+{
+    "name": "orbitkit",
+    "version": "0.1.0",
+    "private": true,
+    "license": "AGPL-3.0-only",
+    "repository": "github:PaddeK/orbitkit",
+    "type": "module",
+    "scripts": {
+        "start": "bun src/index.ts",
+        "dev": "DATA_DIR=./data bun src/index.ts",
+        "once": "DATA_DIR=./data bun src/index.ts --once",
+        "build": "bun build src/index.ts --compile --minify --sourcemap --outfile dist/orbitkit",
+        "test": "bun test",
+        "typecheck": "tsc --noEmit",
+        "opds-crawl": "bun scripts/opds-crawl.ts"
+    },
+    "dependencies": {
+        "@veripublica/epubsana-wasm": "0.36.0",
+        "@veripublica/epubveri-wasm": "0.35.0"
+    },
+    "devDependencies": {
+        "@types/bun": "^1.4.4",
+        "typescript": "^7.0.2"
+    }
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:dc="http://purl.org/dc/terms/"
+      xmlns:opds="http://opds-spec.org/2010/catalog"
+      xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">
+  <title>Recent Books</title>
+  <id>urn:bookorbit:recent</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <link rel="self" href="/api/v1/opds/recent?page=1&amp;size=50" type="application/atom+xml;profile=opds-catalog;kind=acquisition"/>
+  <link rel="start" href="/api/v1/opds" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+  <link rel="search" href="/api/v1/opds/search.opds" type="application/opensearchdescription+xml"/>
+  <link rel="search" href="/api/v1/opds/catalog?q={searchTerms}" type="application/atom+xml" title="Search"/>
+<entry>
+  <title>Moby Dick; or, The Whale</title>
+  <id>urn:bookorbit:book:1</id>
+  <updated>2026-01-01T12:00:00.000Z</updated>
+  <author><name>Melville, Herman</name></author>
+  <content type="text"/>
+  <dc:language>en</dc:language>
+  <dc:publisher>Project Gutenberg</dc:publisher>
+  <dc:identifier>urn:gutenberg:2701</dc:identifier>
+  <link rel="http://opds-spec.org/image" href="/api/v1/opds/1/cover?t=2.abc123" type="image/jpeg"/>
+  <link rel="http://opds-spec.org/image/thumbnail" href="/api/v1/opds/1/thumbnail?t=2.abc123" type="image/jpeg"/>
+  <link rel="http://opds-spec.org/acquisition" href="/api/v1/opds/1/download?fileId=1&amp;selection=SIGNED.TOKEN_1" type="application/epub+zip" title="EPUB"/>
+</entry>
+</feed>
