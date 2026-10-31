@@ -43,7 +43,7 @@ volumes:
 Then `docker logs -f orbitkit`. Every line names the feature it comes from:
 
 ```
-2026-10-30 12:00:00 INFO orbitkit 0.1.0 with epub-check, pocketbook-sync, opds-proxy
+2026-10-30 12:00:00 INFO orbitkit 1.0.0 with epub-check, pocketbook-sync, opds-proxy
 2026-10-30 12:00:00 INFO [epub-check] epubveri 0.35.0+16d7735, epubsana 0.36.0+73dd926; checking every 300s
 2026-10-30 12:00:00 INFO [epub-check] reports on port 8602 (BookOrbit login with "Manage libraries" required), linked in BookOrbit as http://192.168.1.10:8602
 2026-10-30 12:00:00 INFO [pocketbook-sync] syncing every 300s as device "PocketBook Era Color"
@@ -421,7 +421,10 @@ Extra normalisation for picky readers:
 - Absolute URLs everywhere, XML declaration with double quotes, plain `application/atom+xml` media type.
 - Book and cover links end in a real filename (`…/_f/<id>/Some Title.epub`, `…/cover.jpg`) for readers that
   derive the saved filename or format from the URL.
-- Downloads are streamed with `Content-Length`, `Content-Disposition` and `Range` support.
+- Downloads are streamed with `Content-Disposition` and `Range` support. A `HEAD` request reports the size; the
+  download itself comes chunked, without `Content-Length`, because Bun sends streamed responses that way.
+- Sort links that BookOrbit puts into book entries (`rel="http://opds-spec.org/sort/series"`) are dropped: PocketBook
+  would download the series feed instead of the book.
 
 The OPDS Proxy only forwards what readers ask for and writes nothing on its own, so it has no dry run.
 
