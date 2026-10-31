@@ -107,6 +107,15 @@ describe("rewriteDocument", () => {
         expect(hrefs(rewriteDocument(xml, ORIGIN + BASE, mapper))[0]!.endsWith("/Late%20%26%20Title.epub")).toBe(true);
     });
 
+    test("sort links leave entries, so PocketBook downloads the book and not the series feed", () => {
+        const xml = '<feed xmlns="http://www.w3.org/2005/Atom"><link rel="http://opds-spec.org/sort/new" href="/api/v1/opds/recent"/>'
+            + '<entry><title>Burning Chrome</title><link rel="http://opds-spec.org/sort/series" href="/api/v1/opds/catalog?seriesId=53" title="The Sprawl Trilogy #0"/>'
+            + '<link rel="http://opds-spec.org/acquisition" href="/api/v1/opds/107/download?fileId=249" type="application/epub+zip"/></entry></feed>';
+        const out = rewriteDocument(xml, ORIGIN + BASE, mapper);
+        expect(links(out).map((l) => l.attributes.rel)).toEqual(["http://opds-spec.org/sort/new", "http://opds-spec.org/acquisition"]);
+        expect(hrefs(out)[1]!.endsWith("/Burning%20Chrome.epub")).toBe(true);
+    });
+
     test("rejects malformed XML", () => {
         expect(() => rewriteDocument("<feed><unclosed></feed>", ORIGIN + BASE, mapper)).toThrow();
     });

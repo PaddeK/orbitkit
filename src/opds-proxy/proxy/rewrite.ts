@@ -106,9 +106,17 @@ export function* elements(node: Node): Generator<Node> {
     for (const c of node.children) if (isElement(c)) yield* elements(c);
 }
 
+/**
+ * Sort links like BookOrbit's rel="http://opds-spec.org/sort/series" belong to the feed, but BookOrbit also puts them in
+ * entries, untyped and before the book. PocketBook's reader downloads that link instead of the book: the series feed
+ * lands on the reader as the "book".
+ */
+const isSortLinkInEntry = (c: Child) => isElement(c) && localName(c) === "link" && !!c.attributes.rel?.startsWith("http://opds-spec.org/sort/");
+
 function rewriteTree(node: Node, sourceUrl: string, mapper: UrlMapper, entryTitle: string | null): void {
     const attrs = node.attributes;
     const name = localName(node);
+    if (name === "entry") node.children = node.children.filter((c) => !isSortLinkInEntry(c));
     if (name === "link" && attrs.href) {
         attrs.href = rewriteLink(attrs.href, sourceUrl, mapper, attrs.type, attrs.rel, entryTitle);
     } else if (name === "Url" && attrs.template) {
