@@ -140,6 +140,15 @@ test("PUBLIC_URL overrides the Host header", async () => {
     await e.cleanup();
 });
 
+test("links keep the reader's https behind a proxy that ends TLS (X-Forwarded-Proto)", async () => {
+    const host = new URL(READER_ORIGIN).host;
+    const links = async (headers: Record<string, string>) => hrefs(await (await env.call(`/${TOKEN}/`, { headers })).text());
+    expect(await links({ "x-forwarded-proto": "https" })).toContain(`https://${host}/${TOKEN}/recent`);
+    expect(await links({ "x-forwarded-proto": "https, http" })).toContain(`https://${host}/${TOKEN}/recent`);
+    // Anything else is ignored
+    expect(await links({ "x-forwarded-proto": "javascript" })).toContain(`${READER_ORIGIN}/${TOKEN}/recent`);
+});
+
 test("reader activity is recorded with the token masked", async () => {
     await env.call(`/${TOKEN}/recent`, { headers: { "user-agent": "PocketBook" } });
     const [entry] = env.app.activity.recent(1);

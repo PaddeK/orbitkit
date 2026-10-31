@@ -447,7 +447,7 @@ Servers, accounts and reader URLs live in `opds-proxy/config.json` (mode `0600`)
 | `OPDS_PROXY_PORT` | `8601` | Port of the proxy and its admin UI. |
 | `OPDS_PROXY_SETUP_CODE` | random, printed in the log | Your own code for the first-start setup page (at least 12 characters, no placeholders like `change-me`). Ignored once the admin password is set. |
 | `OPDS_PROXY_ADMIN_PASSWORD` | – | Sets the admin password on every start and skips setup. Changes made in the UI are overwritten on the next restart, so mainly use it to reset a forgotten password, then remove it. |
-| `OPDS_PROXY_PUBLIC_URL` | from `Host` header | Externally visible base URL, e.g. `https://opds.example.org`. Only needed behind another reverse proxy that rewrites `Host`. |
+| `OPDS_PROXY_PUBLIC_URL` | from the `Host` and `X-Forwarded-Proto` headers | Externally visible base URL for the links in the feeds, e.g. `https://opds.example.org`. Tunnels and reverse proxies that end TLS (Cloudflare Tunnel, Caddy, Traefik, nginx with `X-Forwarded-Proto`) need nothing; set it if yours rewrites `Host` or sends no `X-Forwarded-Proto`, so the links don't come out as `http://`. |
 | `OPDS_PROXY_UPSTREAM_TIMEOUT` | `60` | Seconds to wait for the upstream to answer (not counting download time). |
 
 ## Migrating from orbitcheck, pocketorbit and opds-proxy

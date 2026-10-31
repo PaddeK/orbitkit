@@ -4,7 +4,11 @@ import type { SafeHtml } from "./admin/html.ts";
 export function publicOrigin(req: Request, publicUrl?: string): string {
     if (publicUrl) return publicUrl.replace(/\/+$/, "");
     const url = new URL(req.url);
-    return `${url.protocol}//${req.headers.get("host") ?? url.host}`;
+    // Behind a tunnel or reverse proxy that ends TLS (Cloudflare, Caddy, Traefik) the request arrives as plain http;
+    // the proxy names the reader's scheme. Spoofing it only changes the links in the spoofer's own response.
+    const forwarded = req.headers.get("x-forwarded-proto")?.split(",", 1)[0]!.trim().toLowerCase();
+    const protocol = forwarded === "https" || forwarded === "http" ? `${forwarded}:` : url.protocol;
+    return `${protocol}//${req.headers.get("host") ?? url.host}`;
 }
 
 export function redirect(location: string, headers: Record<string, string> = {}): Response {
