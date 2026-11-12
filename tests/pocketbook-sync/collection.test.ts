@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, spyOn, test } from "bun:test";
 import type { Book } from "../../src/bookorbit.ts";
 import { koreaderHash } from "../../src/pocketbook-sync/fingerprint.ts";
-import { cloudFileName, pickFile } from "../../src/pocketbook-sync/shelf.ts";
+import { cloudFileName, pickFile } from "../../src/pocketbook-sync/collection.ts";
 import { State } from "../../src/pocketbook-sync/state.ts";
 import { API_KEY, type FakeServices, type TestEnv, makeEnv, startFakeServices } from "./helpers.ts";
 
@@ -15,7 +15,7 @@ afterAll(() => fake.stop());
 beforeEach(async () => {
     Object.assign(fake, {
         books: [], accessToken: undefined, logins: 0, renewals: 0, downloads: 0, matchRequests: [], progress: [],
-        uploads: [], storageFull: false, shelves: [], boBooks: [], boDownloads: 0,
+        uploads: [], storageFull: false, boCollections: [], boBooks: [], boDownloads: 0,
     });
     fake.files.clear();
     fake.library.clear();
@@ -25,18 +25,18 @@ beforeEach(async () => {
 });
 afterEach(() => env.cleanup());
 
-const SHELF = { name: "PocketBook", apiKey: API_KEY, cloudCollection: "PocketBook" };
-const shelfBridge = (overrides = {}) => env.bridge({ shelf: SHELF, ...overrides });
+const COLLECTION = { name: "PocketBook", apiKey: API_KEY, cloudCollection: "PocketBook" };
+const collectionBridge = (overrides = {}) => env.bridge({ collection: COLLECTION, ...overrides });
 
-/** Put BookOrbit books on the shelf "PocketBook". */
-function shelve(...books: Book[]) {
-    fake.shelves = [{ id: 7, name: "Favourites", bookIds: [] }, { id: 9, name: "PocketBook", bookIds: books.map((b) => b.id) }];
+/** Make these BookOrbit books the collection "PocketBook". */
+function collect(...books: Book[]) {
+    fake.boCollections = [{ id: 7, name: "Favourites", bookIds: [] }, { id: 9, name: "PocketBook", bookIds: books.map((b) => b.id) }];
 }
 
-test("uploads the books of the shelf and puts them into a cloud collection", async () => {
+test("uploads the books of the collection and puts them into a cloud collection", async () => {
     const { book, bytes } = fake.addBoBook("Moby Dick");
-    shelve(book);
-    const bridge = await shelfBridge();
+    collect(book);
+    const bridge = await collectionBridge();
     await bridge.cycle();
 
     expect(fake.uploads).toEqual([{ name: "Moby-Dick.epub", source: "bookorbit", bytes: 50_000 }]);
@@ -58,8 +58,8 @@ test("does not upload a book the cloud has already", async () => {
     // The listing has no usable checksum: a book of the same size is compared by content
     fake.addBook("same size, other content", {}, new Uint8Array(bytes.epub!.length));
     const cloudBook = fake.addBook("moby-dick-from-opds", {}, bytes.epub);
-    shelve(book);
-    await (await shelfBridge()).cycle();
+    collect(book);
+    await (await collectionBridge()).cycle();
 
     expect(fake.uploads).toEqual([]);
     expect(fake.collections.get("PocketBook")).toEqual([cloudBook.fast_hash]);
@@ -70,8 +70,8 @@ test("sends the preferred format and skips books without one PocketBook reads", 
     warn.mockClear();
     const both = fake.addBoBook("Both", ["pdf", "epub"]);
     const audio = fake.addBoBook("Audio", ["m4b"]);
-    shelve(both.book, audio.book);
-    const bridge = await shelfBridge();
+    collect(both.book, audio.book);
+    const bridge = await collectionBridge();
     await bridge.cycle();
     await bridge.cycle();
 
@@ -83,8 +83,8 @@ test("sends the preferred format and skips books without one PocketBook reads", 
 
 test("uploads big files in one request", async () => {
     const { book, bytes } = fake.addBoBook("Atlas", ["pdf"], 6 * 1024 * 1024 + 1000);
-    shelve(book);
-    const bridge = await shelfBridge();
+    collect(book);
+    const bridge = await collectionBridge();
     await bridge.cycle();
 
     expect(fake.uploads).toEqual([{ name: "Atlas.pdf", source: "bookorbit", bytes: bytes.pdf!.length }]);
@@ -93,18 +93,18 @@ test("uploads big files in one request", async () => {
     expect(fake.collections.get("PocketBook")).toEqual([uploaded.fast_hash]);
 });
 
-test("books taken off the shelf stay in the cloud, and are sent again when put back", async () => {
+test("books taken out of the collection stay in the cloud, and are sent again when put back", async () => {
     const { book } = fake.addBoBook("Moby Dick");
-    shelve(book);
-    const bridge = await shelfBridge();
+    collect(book);
+    const bridge = await collectionBridge();
     await bridge.cycle();
-    shelve();
+    collect();
     await bridge.cycle();
     expect(fake.books.map((b) => b.title)).toEqual(["Moby-Dick"]);
-    expect((await State.open(env.dir)).data.shelf).toEqual({});
+    expect((await State.open(env.dir)).data.collection).toEqual({});
 
-    // Back on the shelf: found in the cloud, not uploaded twice
-    shelve(book);
+    // Back in the collection: found in the cloud, not uploaded twice
+    collect(book);
     await bridge.cycle();
     expect(fake.uploads).toHaveLength(1);
     expect(fake.collections.get("PocketBook")).toHaveLength(1);
@@ -112,8 +112,8 @@ test("books taken off the shelf stay in the cloud, and are sent again when put b
 
 test("a dry run uploads nothing", async () => {
     const { book } = fake.addBoBook("Moby Dick");
-    shelve(book);
-    await (await shelfBridge({ dryRun: true })).cycle();
+    collect(book);
+    await (await collectionBridge({ dryRun: true })).cycle();
     expect(fake.uploads).toEqual([]);
     expect(fake.collections.size).toBe(0);
 });
@@ -121,9 +121,9 @@ test("a dry run uploads nothing", async () => {
 test("a full cloud stops the round, and the books follow once there is room", async () => {
     const first = fake.addBoBook("First");
     const second = fake.addBoBook("Second");
-    shelve(first.book, second.book);
+    collect(first.book, second.book);
     fake.storageFull = true;
-    const bridge = await shelfBridge();
+    const bridge = await collectionBridge();
     await bridge.cycle();
     expect(fake.boDownloads).toBe(1);
 
@@ -132,17 +132,17 @@ test("a full cloud stops the round, and the books follow once there is room", as
     expect(fake.uploads.map((u) => u.name)).toEqual(["First.epub", "Second.epub"]);
 });
 
-test("the progress sync goes on without the shelf", async () => {
+test("the progress sync goes on without the collection", async () => {
     const { book } = fake.addBoBook("Moby Dick");
-    fake.shelves = [{ id: 1, name: "Other", bookIds: [book.id] }];
+    fake.boCollections = [{ id: 1, name: "Other", bookIds: [book.id] }];
     const cloudBook = fake.addBook("Read on the reader", { read_percent: 30 });
     fake.library.add(koreaderHash(fake.files.get(cloudBook.fast_hash)!));
 
-    expect(await (await shelfBridge()).cycle()).toBe(1);
+    expect(await (await collectionBridge()).cycle()).toBe(1);
     expect(fake.uploads).toEqual([]);
 
     // A refused key doesn't stop it either
-    expect(await (await shelfBridge({ shelf: { ...SHELF, apiKey: "bok_revoked" } })).cycle()).toBe(0);
+    expect(await (await collectionBridge({ collection: { ...COLLECTION, apiKey: "bok_revoked" } })).cycle()).toBe(0);
 });
 
 test("pickFile and cloudFileName", () => {

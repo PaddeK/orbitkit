@@ -5,7 +5,7 @@ import { Fingerprint } from "./fingerprint.ts";
 import { HttpError } from "../http.ts";
 import { log } from "./log.ts";
 import { type CloudBook, md5Mismatch, PocketBookCloud } from "./pocketbook.ts";
-import { ShelfSender } from "./shelf.ts";
+import { CollectionSender } from "./collection.ts";
 import type { State } from "./state.ts";
 
 const AUDIO_FORMATS = new Set(["mp3", "m4a", "m4b", "aac", "ogg", "opus", "flac", "wav"]);
@@ -27,11 +27,11 @@ function isSyncable(book: CloudBook): boolean {
     return !book.isAudioBook && !AUDIO_FORMATS.has(book.format?.toLowerCase() ?? "") && !!book.link && !!book.fast_hash;
 }
 
-/** One sync cycle: the BookOrbit shelf -> PocketBook Cloud, if set, then PocketBook Cloud reading percentages -> BookOrbit. */
+/** One sync cycle: the BookOrbit collection -> PocketBook Cloud, if set, then PocketBook Cloud reading percentages -> BookOrbit. */
 export class Bridge {
     readonly pocketbook: PocketBookCloud;
     readonly bookorbit: BookOrbit;
-    readonly shelf?: ShelfSender;
+    readonly collection?: CollectionSender;
 
     constructor(private readonly config: Config, private readonly state: State) {
         const data = state.data;
@@ -39,7 +39,7 @@ export class Bridge {
         this.pocketbook = new PocketBookCloud(config.pbEmail, config.pbPassword, data.pocketbook, config.pbShop, config.pbUrl);
         this.bookorbit = new BookOrbit(config.bookorbitUrl, config.koreaderUser, config.koreaderPassword,
             { name: config.deviceName, id: data.deviceId });
-        if (config.shelf) this.shelf = new ShelfSender(config.shelf, config, this.pocketbook, state);
+        if (config.collection) this.collection = new CollectionSender(config.collection, config, this.pocketbook, state);
     }
 
     private get books() {
@@ -51,14 +51,14 @@ export class Bridge {
         const library = await this.pocketbook.books();
         const cloud = library.filter(isSyncable);
         this.forgetRemoved(cloud);
-        let shelf = "";
-        if (this.shelf) {
+        let sentBooks = "";
+        if (this.collection) {
             try {
-                const result = await this.shelf.send(library);
-                shelf = `, ${result.uploaded} book(s) uploaded from the shelf`;
+                const result = await this.collection.send(library);
+                sentBooks = `, ${result.uploaded} book(s) uploaded from the BookOrbit collection`;
             } catch (err) {
                 // The progress sync goes on without it
-                log.warn(`sending the shelf "${this.config.shelf!.name}" failed, will retry next cycle: ${(err as Error).message}`);
+                log.warn(`sending the BookOrbit collection "${this.config.collection!.name}" failed, will retry next cycle: ${(err as Error).message}`);
             }
         }
         await this.fingerprintNew(cloud);
@@ -67,7 +67,7 @@ export class Bridge {
         const sent = await this.sendChanges(known);
         this.state.data.lastSuccess = Date.now();
         await this.state.save();
-        log.info(`cycle done: ${cloud.length} book(s) in PocketBook Cloud, ${sent} progress update(s) sent${shelf}`);
+        log.info(`cycle done: ${cloud.length} book(s) in PocketBook Cloud, ${sent} progress update(s) sent${sentBooks}`);
         return sent;
     }
 

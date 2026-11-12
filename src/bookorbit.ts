@@ -37,7 +37,7 @@ export interface BookDetail {
 
 export type FieldType = "text" | "url" | "number" | "date" | "boolean";
 
-/** A collection ("shelf") in BookOrbit; each belongs to one user. */
+/** A collection in BookOrbit; each belongs to one user. */
 export interface Collection {
     id: number;
     name: string;

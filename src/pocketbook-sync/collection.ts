@@ -1,18 +1,18 @@
 import { type Book, type BookFile, BookOrbit } from "../bookorbit.ts";
 import { HttpError, TooLargeError } from "../http.ts";
-import type { Config, ShelfConfig } from "./config.ts";
+import type { Config, CollectionConfig } from "./config.ts";
 import { Fingerprint } from "./fingerprint.ts";
 import { log } from "./log.ts";
 import type { CloudBook, PocketBookCloud } from "./pocketbook.ts";
-import type { ShelfEntry, State } from "./state.ts";
+import type { CollectionEntry, State } from "./state.ts";
 
 /** The formats sent to the reader, the preferred first; a book goes with the first of them it has. */
-export const SHELF_FORMATS = ["epub", "fb2", "mobi", "azw3", "azw", "pdf", "djvu", "cbz", "cbr", "docx", "doc", "rtf", "txt"];
+export const SEND_FORMATS = ["epub", "fb2", "mobi", "azw3", "azw", "pdf", "djvu", "cbz", "cbr", "docx", "doc", "rtf", "txt"];
 /** Books are held in memory between download and upload */
 const MAX_BYTES = 300 * 1024 * 1024;
 
 /** What one round of sending did. */
-export interface ShelfResult {
+export interface CollectionResult {
     uploaded: number;
     /** Not sent because the cloud had them already */
     found: number;
@@ -24,7 +24,7 @@ const BOOK_ROLES = new Set(["primary", "content"]);
 /** The file of a book to send: the book in the most preferred format. */
 export function pickFile(book: Book): BookFile | undefined {
     const files = book.files.filter((file) => BOOK_ROLES.has(file.role) && file.format);
-    for (const format of SHELF_FORMATS) {
+    for (const format of SEND_FORMATS) {
         const file = files.find((candidate) => candidate.format!.toLowerCase() === format);
         if (file) return file;
     }
@@ -42,31 +42,31 @@ export function cloudFileName(book: Book, file: BookFile, downloaded?: string): 
 }
 
 /**
- * Sends the books of a BookOrbit shelf (a collection) to PocketBook Cloud, from where the reader syncs them, and
- * puts them into a cloud collection. Books taken off the shelf stay in the cloud: removing them is up to the reader.
+ * Sends the books of a BookOrbit collection to PocketBook Cloud, from where the reader syncs them, and puts them into
+ * a cloud collection. Books taken out of the collection stay in the cloud: removing them is up to the reader.
  */
-export class ShelfSender {
+export class CollectionSender {
     readonly bookorbit: BookOrbit;
     /** Warnings about the setup, logged once until they change */
     private readonly warned = new Set<string>();
 
     constructor(
-        private readonly shelf: ShelfConfig,
+        private readonly collection: CollectionConfig,
         private readonly config: Pick<Config, "bookorbitUrl" | "dryRun">,
         private readonly pocketbook: PocketBookCloud,
         private readonly state: State,
     ) {
-        this.bookorbit = new BookOrbit(config.bookorbitUrl, { apiKey: shelf.apiKey });
+        this.bookorbit = new BookOrbit(config.bookorbitUrl, { apiKey: collection.apiKey });
     }
 
-    private get entries(): Record<string, ShelfEntry> {
-        return (this.state.data.shelf ??= {});
+    private get entries(): Record<string, CollectionEntry> {
+        return (this.state.data.collection ??= {});
     }
 
     /** One round; `cloud` is the cloud library as just listed. */
-    async send(cloud: CloudBook[]): Promise<ShelfResult> {
-        const result: ShelfResult = { uploaded: 0, found: 0 };
-        const books = await this.shelfBooks();
+    async send(cloud: CloudBook[]): Promise<CollectionResult> {
+        const result: CollectionResult = { uploaded: 0, found: 0 };
+        const books = await this.collectionBooks();
         if (!books) return result;
         this.forgetRemoved(books);
 
@@ -79,19 +79,19 @@ export class ShelfSender {
         return result;
     }
 
-    /** The books on the shelf, or undefined if BookOrbit has no shelf of that name. */
-    private async shelfBooks(): Promise<Book[] | undefined> {
+    /** The books in the collection, or undefined if BookOrbit has no collection of that name. */
+    private async collectionBooks(): Promise<Book[] | undefined> {
         const collections = await this.bookorbit.collections();
-        const collection = collections.find((c) => c.name === this.shelf.name)
-            ?? collections.find((c) => c.name.toLowerCase() === this.shelf.name.toLowerCase());
-        if (!collection) {
+        const found = collections.find((c) => c.name === this.collection.name)
+            ?? collections.find((c) => c.name.toLowerCase() === this.collection.name.toLowerCase());
+        if (!found) {
             const names = collections.map((c) => `"${c.name}"`).join(", ") || "none";
-            this.warnOnce(`BookOrbit has no shelf "${this.shelf.name}" for the owner of POCKETBOOK_SYNC_BOOKORBIT_API_KEY (shelves: ${names})`);
+            this.warnOnce(`BookOrbit has no collection "${this.collection.name}" for the owner of POCKETBOOK_SYNC_BOOKORBIT_API_KEY (collections: ${names})`);
             return undefined;
         }
-        // Said again if the shelf goes missing once more
-        for (const message of this.warned) if (message.startsWith("BookOrbit has no shelf")) this.warned.delete(message);
-        return this.bookorbit.collectionBooks(collection.id);
+        // Said again if the collection goes missing once more
+        for (const message of this.warned) if (message.startsWith("BookOrbit has no collection")) this.warned.delete(message);
+        return this.bookorbit.collectionBooks(found.id);
     }
 
     private forgetRemoved(books: Book[]): void {
@@ -99,7 +99,7 @@ export class ShelfSender {
         for (const [id, entry] of Object.entries(this.entries)) {
             if (present.has(id)) continue;
             delete this.entries[id];
-            log.info(`"${entry.title}" left the shelf "${this.shelf.name}"; it stays in PocketBook Cloud`);
+            log.info(`"${entry.title}" left the BookOrbit collection "${this.collection.name}"; it stays in PocketBook Cloud`);
         }
     }
 
@@ -126,7 +126,7 @@ export class ShelfSender {
 
     private async sendBook(book: Book, cloud: CloudBook[]): Promise<"uploaded" | "found" | "full" | undefined> {
         const title = book.title || `Book ${book.id}`;
-        const entry: ShelfEntry = (this.entries[String(book.id)] ??= { title });
+        const entry: CollectionEntry = (this.entries[String(book.id)] ??= { title });
         if (entry.fastHash) {
             if (!entry.collected) await this.collect(entry);
             return undefined;
@@ -175,7 +175,7 @@ export class ShelfSender {
             if (err.status === 409) return this.skip(entry, file.id, "PocketBook Cloud has this file already, under another name");
             if (err.status === 415) return this.skip(entry, file.id, `PocketBook Cloud does not take it: ${err.body.slice(0, 200)}`);
             if (err.status === 507) {
-                log.warn(`PocketBook Cloud storage is full, "${title}" and the rest of the shelf wait: ${err.body.slice(0, 200)}`);
+                log.warn(`PocketBook Cloud storage is full, "${title}" and the rest of the collection wait: ${err.body.slice(0, 200)}`);
                 return "full";
             }
             log.warn(`uploading "${title}" failed, will retry next cycle: ${err.message}`);
@@ -194,22 +194,22 @@ export class ShelfSender {
         this.warned.add(message);
     }
 
-    private skip(entry: ShelfEntry, fileId: number | undefined, reason: string): undefined {
+    private skip(entry: CollectionEntry, fileId: number | undefined, reason: string): undefined {
         // Logged once per file, not every cycle
         if (entry.skipped !== reason || entry.fileId !== fileId) log.warn(`not sending "${entry.title}": ${reason}`);
         Object.assign(entry, { fileId, skipped: reason });
         return undefined;
     }
 
-    private async collect(entry: ShelfEntry): Promise<void> {
+    private async collect(entry: CollectionEntry): Promise<void> {
         if (this.config.dryRun) return;
         try {
-            await this.pocketbook.addToCollection(this.shelf.cloudCollection, entry.fastHash!);
+            await this.pocketbook.addToCollection(this.collection.cloudCollection, entry.fastHash!);
             entry.collected = true;
         } catch (err) {
             if (!(err instanceof HttpError)) throw err;
             // A file the cloud is still processing can't be added yet
-            log.info(`adding "${entry.title}" to the PocketBook collection "${this.shelf.cloudCollection}" failed, will retry next cycle: ${err.message}`);
+            log.info(`adding "${entry.title}" to the PocketBook collection "${this.collection.cloudCollection}" failed, will retry next cycle: ${err.message}`);
         }
     }
 }

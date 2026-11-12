@@ -38,7 +38,7 @@ export function startFakeServices() {
         /** Answer uploads with 507, as a full account does */
         storageFull: false,
         /** BookOrbit's collections of the API key's owner */
-        shelves: [] as { id: number; name: string; bookIds: number[] }[],
+        boCollections: [] as { id: number; name: string; bookIds: number[] }[],
         /** BookOrbit's books, with their files */
         boBooks: [] as Book[],
         boFiles: new Map<number, { bytes: Uint8Array; name: string }>(),
@@ -126,10 +126,10 @@ export function startFakeServices() {
             if (path.startsWith(BO_API) && !path.startsWith(BO)) {
                 if (req.headers.get("authorization") !== `Bearer ${API_KEY}`) return unauthorized();
                 if (path === `${BO_API}/auth/me`) return Response.json({ username: "reader", authenticationMethod: "api_key" });
-                if (path === `${BO_API}/collections`) return Response.json(fake.shelves.map(({ id, name }) => ({ id, name })));
-                const shelf = /^\/bo\/api\/v1\/collections\/(\d+)\/books\/query$/.exec(path);
-                if (shelf && req.method === "POST") {
-                    const found = fake.shelves.find((s) => s.id === Number(shelf[1]));
+                if (path === `${BO_API}/collections`) return Response.json(fake.boCollections.map(({ id, name }) => ({ id, name })));
+                const boCollection = /^\/bo\/api\/v1\/collections\/(\d+)\/books\/query$/.exec(path);
+                if (boCollection && req.method === "POST") {
+                    const found = fake.boCollections.find((c) => c.id === Number(boCollection[1]));
                     if (!found) return notFound();
                     const { pagination } = (await req.json()) as { pagination: { page: number; size: number } };
                     const items = found.bookIds.map((id) => fake.boBooks.find((b) => b.id === id)!);

@@ -12,8 +12,8 @@ export interface BookState {
     sent?: { percent: number; mtime?: number };
 }
 
-/** A book on the BookOrbit shelf, keyed by its BookOrbit ID. */
-export interface ShelfEntry {
+/** A book in the BookOrbit collection, keyed by its BookOrbit ID. */
+export interface CollectionEntry {
     title: string;
     /** The BookOrbit file sent, or the one that was skipped */
     fileId?: number;
@@ -31,8 +31,8 @@ export interface StateData {
     deviceId?: string;
     pocketbook: Tokens;
     books: Record<string, BookState>;
-    /** The books of the shelf sent to PocketBook Cloud (POCKETBOOK_SYNC_SHELF) */
-    shelf?: Record<string, ShelfEntry>;
+    /** The books of the BookOrbit collection sent to PocketBook Cloud (POCKETBOOK_SYNC_COLLECTION) */
+    collection?: Record<string, CollectionEntry>;
     /** Epoch milliseconds of the last successful sync cycle, for the healthcheck */
     lastSuccess?: number;
 }

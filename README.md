@@ -313,8 +313,8 @@ position in that chapter, like a highlight, can end up slightly off; percentage 
 ## PocketBook Sync
 
 Keeps BookOrbit up to date with what you read in the **built-in reader of a PocketBook** e-reader, without KOReader
-or anything else installed on the device. It can also send the books of a BookOrbit shelf to the reader, see
-[Sending a shelf to the reader](#sending-a-shelf-to-the-reader).
+or anything else installed on the device. It can also send the books of a BookOrbit collection to the reader, see
+[Sending a collection to the reader](#sending-a-collection-to-the-reader).
 
 ```
 PocketBook reader ──(built-in cloud sync)──▶ PocketBook Cloud ──(polled)──▶ PocketBook Sync ──(KOReader sync API)──▶ BookOrbit
@@ -363,44 +363,46 @@ How it works:
 | `POCKETBOOK_SYNC_DEVICE_NAME` | `PocketBook` | How the e-reader is named in BookOrbit. |
 | `POCKETBOOK_SYNC_DEVICE_ID` | random | Device ID reported to BookOrbit. Only read on the first start, then kept in `pocketbook-sync/state.json`. |
 | `POCKETBOOK_SYNC_INTERVAL` | `300` | Seconds between polls (at least 30). |
-| `POCKETBOOK_SYNC_SHELF` | | Name of a BookOrbit shelf whose books are sent to the reader, see [Sending a shelf to the reader](#sending-a-shelf-to-the-reader). |
-| `POCKETBOOK_SYNC_BOOKORBIT_API_KEY` | required with a shelf | A BookOrbit API key of the shelf's owner (BookOrbit 3.8 or newer): read access with the *Download books* permission. |
-| `POCKETBOOK_SYNC_CLOUD_COLLECTION` | the shelf's name | The PocketBook Cloud collection the books go into (3 to 255 characters); the reader shows it as a shelf. |
+| `POCKETBOOK_SYNC_COLLECTION` | | Name of a BookOrbit collection whose books are sent to the reader, see [Sending a collection to the reader](#sending-a-collection-to-the-reader). |
+| `POCKETBOOK_SYNC_BOOKORBIT_API_KEY` | required with a collection | A BookOrbit API key of the collection's owner (BookOrbit 3.8 or newer): read access with the *Download books* permission. |
+| `POCKETBOOK_SYNC_CLOUD_COLLECTION` | the collection's name | The PocketBook Cloud collection the books go into (3 to 255 characters); the reader shows it as a shelf. |
 
 It uses `BOOKORBIT_URL`, but not `BOOKORBIT_USER`: KOReader sync has credentials of its own.
 `pocketbook-sync/state.json` holds the PocketBook Cloud tokens, the device ID, each book's fingerprint and the last
-value sent, and which shelf books are in the cloud. Deleting it is safe: books are downloaded and fingerprinted again,
-unchanged progress is sent once more, and shelf books are found in the cloud instead of being uploaded twice.
+value sent, and which books of the collection are in the cloud. Deleting it is safe: books are downloaded and
+fingerprinted again, unchanged progress is sent once more, and the collection's books are found in the cloud instead of
+being uploaded twice.
 
-### Sending a shelf to the reader
+### Sending a collection to the reader
 
-Put a book on a shelf in BookOrbit, and it shows up on the PocketBook at its next sync:
+Add a book to a collection in BookOrbit, and it shows up on the PocketBook at its next sync:
 
 ```
-BookOrbit shelf ──(API key)──▶ PocketBook Sync ──(upload)──▶ PocketBook Cloud ──(built-in cloud sync)──▶ PocketBook reader
+BookOrbit collection ──(API key)──▶ PocketBook Sync ──(upload)──▶ PocketBook Cloud ──(built-in cloud sync)──▶ PocketBook reader
 ```
 
-On every cycle, PocketBook Sync reads the shelf and uploads each new book to PocketBook Cloud. It also adds the book to
+On every cycle, PocketBook Sync reads the collection and uploads each new book to PocketBook Cloud. It also adds the book to
 a cloud collection of the same name, which the reader shows as a shelf too. The file sent is the book's EPUB, or else
 the first of FB2, MOBI, AZW3, PDF, DjVu, CBZ, CBR, DOCX, DOC, RTF and TXT it has. It is BookOrbit's file as it is, so
 the progress sync recognises it right away.
 
-- **Taking a book off the shelf** leaves it in the cloud and on the reader, with its reading position. Remove it on
-  the reader when you are done with it. A book deleted on the reader stays deleted, even while it is still on the
-  shelf; take it off the shelf and put it back to send it again.
+- **Removing a book from the collection** leaves it in the cloud and on the reader, with its reading position. Remove it on
+  the reader when you are done with it. A book deleted on the reader stays deleted, even while it is still in the
+  collection; remove it from the collection and add it again to send it again.
 - **A book that is in the cloud already**, e.g. downloaded through OPDS earlier, is not uploaded a second time; it only
   joins the collection.
 - **Books without a format PocketBook reads** (audiobooks, for example) are skipped, and the log says so once.
-- When the **cloud storage is full**, the rest of the shelf waits and follows once there is room.
+- When the **cloud storage is full**, the rest of the collection waits and follows once there is room.
 
 Setup:
 
-1. **BookOrbit:** create a shelf, e.g. *PocketBook*. Then create an API key under *Settings → You → API keys*:
-   access **Read**, permission **Download books**, and limit it to the libraries the shelf draws from if you like. The
-   key acts as you, so it sees your shelves; your user needs the *Create API keys* permission, and API keys must be
+1. **BookOrbit:** create a collection (*Create collection*), e.g. *PocketBook*, and add books to it with *Add to
+   Collection*. Then create an API key under *Settings → You → API keys*: access **Read**, permission **Download
+   books**, and limit it to the libraries the collection draws from if you like. The key acts as you, so it sees your
+   collections; your user needs the *Create API keys* permission, and API keys must be
    allowed under *Settings → Admin → API keys*.
-2. **orbitkit:** set `POCKETBOOK_SYNC_SHELF=PocketBook` and `POCKETBOOK_SYNC_BOOKORBIT_API_KEY=bok_…`. The log shows
-   `sending the BookOrbit shelf "PocketBook" of <you> to the PocketBook collection "PocketBook"` at the start, and every
+2. **orbitkit:** set `POCKETBOOK_SYNC_COLLECTION=PocketBook` and `POCKETBOOK_SYNC_BOOKORBIT_API_KEY=bok_…`. The log
+   shows `sending the BookOrbit collection "PocketBook" of <you> to the PocketBook collection "PocketBook"` at the start, and every
    upload. With `POCKETBOOK_SYNC_DRY_RUN=true`, it logs what it would upload instead.
 
 
@@ -420,7 +422,7 @@ What still happens:
 What does not happen, and is logged instead:
 
 - No reading progress is sent (`[dry run] would send "Moby Dick": 26% (as of 2026-10-28T23:15:29Z)`).
-- No shelf book is uploaded (`[dry run] would upload "Moby Dick" to PocketBook Cloud as Moby Dick.epub (812345 bytes)`).
+- No book of the collection is uploaded (`[dry run] would upload "Moby Dick" to PocketBook Cloud as Moby Dick.epub (812345 bytes)`).
   The books are still downloaded from BookOrbit, to find those the cloud has already.
 
 Since nothing counts as sent during a dry run, the first cycle after you turn it off sends the current percentage of
@@ -590,7 +592,7 @@ helpers. Each feature has a folder with an `index.ts` that creates it and a `con
   uploads until they are confirmed, `report.ts` serves the report pages, and `wasm.ts` loads the WebAssembly (Bun
   can't import `.wasm` modules the way the packages expect, so they are instantiated by hand and embedded into the
   executable).
-- `src/pocketbook-sync/`: `sync.ts` is the sync cycle, `shelf.ts` sends a BookOrbit shelf to the cloud,
+- `src/pocketbook-sync/`: `sync.ts` is the sync cycle, `collection.ts` sends a BookOrbit collection to the cloud,
   `pocketbook.ts` and `koreader.ts` are the API clients, `fingerprint.ts` KOReader's partial MD5 computed while
   streaming, `state.ts` the state file.
 - `src/opds-proxy/`: `proxy/` holds the OPDS rewriting (`mapper.ts` URL mapping, `rewrite.ts` XML, `handler.ts`

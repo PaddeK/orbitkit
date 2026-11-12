@@ -42,8 +42,8 @@ services:
       POCKETBOOK_SYNC_KOREADER_USER: ${POCKETBOOK_SYNC_KOREADER_USER}
       POCKETBOOK_SYNC_KOREADER_PASSWORD: ${POCKETBOOK_SYNC_KOREADER_PASSWORD}
       POCKETBOOK_SYNC_DEVICE_NAME: PocketBook Era Color
-      # Send the books of a BookOrbit shelf to the reader (needs a BookOrbit 3.8 API key)
-      # POCKETBOOK_SYNC_SHELF: PocketBook
+      # Send the books of a BookOrbit collection to the reader (needs a BookOrbit 3.8 API key)
+      # POCKETBOOK_SYNC_COLLECTION: PocketBook
       # POCKETBOOK_SYNC_BOOKORBIT_API_KEY: ${POCKETBOOK_SYNC_BOOKORBIT_API_KEY}
 
       # OPDS Proxy; set it up at http://<docker-host>:8601/admin

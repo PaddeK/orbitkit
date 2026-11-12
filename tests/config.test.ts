@@ -99,9 +99,9 @@ test("invalid values are rejected", () => {
     expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_INTERVAL: "5" })).toThrow("at least 30");
     expect(() => loadConfig({ ...EPUB_CHECK, BOOKORBIT_API_KEY: "secret" })).toThrow("starts with bok_");
     expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_DEVICE_ID: "my device!" })).toThrow("letters, digits and hyphens");
-    expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_SHELF: "PocketBook" })).toThrow("Missing required settings: POCKETBOOK_SYNC_BOOKORBIT_API_KEY");
-    expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_SHELF: "PocketBook", POCKETBOOK_SYNC_BOOKORBIT_API_KEY: "secret" })).toThrow("starts with bok_");
-    expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_SHELF: "PB", POCKETBOOK_SYNC_BOOKORBIT_API_KEY: "bok_x" })).toThrow("3 to 255 characters");
+    expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_COLLECTION: "PocketBook" })).toThrow("Missing required settings: POCKETBOOK_SYNC_BOOKORBIT_API_KEY");
+    expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_COLLECTION: "PocketBook", POCKETBOOK_SYNC_BOOKORBIT_API_KEY: "secret" })).toThrow("starts with bok_");
+    expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_COLLECTION: "PB", POCKETBOOK_SYNC_BOOKORBIT_API_KEY: "bok_x" })).toThrow("3 to 255 characters");
     expect(() => loadConfig({ ...EPUB_CHECK, OPDS_PROXY_ENABLED: "true", OPDS_PROXY_PORT: "8602" })).toThrow("each feature needs its own port");
 });
 
@@ -120,14 +120,14 @@ test("PocketBook Sync: uses the KOReader login, not the web login", () => {
         syncInterval: 300,
         dataDir: "/data/pocketbook-sync",
         dryRun: false,
-        shelf: undefined,
+        collection: undefined,
     });
 });
 
-test("PocketBook Sync: a shelf to send needs an API key; its cloud collection is named after it", () => {
-    const env = { ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_SHELF: "PocketBook", POCKETBOOK_SYNC_BOOKORBIT_API_KEY: "bok_abc" };
-    expect(loadConfig(env).pocketbookSync!.shelf).toEqual({ name: "PocketBook", apiKey: "bok_abc", cloudCollection: "PocketBook" });
-    expect(loadConfig({ ...env, POCKETBOOK_SYNC_CLOUD_COLLECTION: "From BookOrbit" }).pocketbookSync!.shelf!.cloudCollection).toBe("From BookOrbit");
+test("PocketBook Sync: a collection to send needs an API key; its cloud collection is named after it", () => {
+    const env = { ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_COLLECTION: "PocketBook", POCKETBOOK_SYNC_BOOKORBIT_API_KEY: "bok_abc" };
+    expect(loadConfig(env).pocketbookSync!.collection).toEqual({ name: "PocketBook", apiKey: "bok_abc", cloudCollection: "PocketBook" });
+    expect(loadConfig({ ...env, POCKETBOOK_SYNC_CLOUD_COLLECTION: "From BookOrbit" }).pocketbookSync!.collection!.cloudCollection).toBe("From BookOrbit");
 });
 
 test("OPDS Proxy: needs no BookOrbit settings", () => {
