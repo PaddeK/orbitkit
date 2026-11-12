@@ -46,7 +46,7 @@ export async function createEpubCheck(config: Config): Promise<Feature> {
             log.info(`epubveri ${epubveriVersion}, epubsana ${epubsanaVersion}${epublift ? `, epublift ${epublift.version}` : ""}; checking every ${config.checkInterval}s`
                 + `${config.dryRun ? " (dry run: nothing is changed in BookOrbit)" : ""}`);
             void checker.bookorbit.checkAuth().then(
-                (user) => log.info(`BookOrbit: logged in as ${user}`),
+                (user) => log.info(`BookOrbit: logged in as ${user}${config.bookorbitApiKey ? " with an API key" : ""}`),
                 (err) => log.error(`BookOrbit: ${(err as Error).message}`));
             // Replacing books needs the dry run off: it changes the library, which a dry run promises not to
             const replacer = config.replaceInLibrary && !config.dryRun ? new Replacer(config, state, checker) : undefined;

@@ -31,8 +31,7 @@ services:
     environment:
       BOOKORBIT_URL: http://bookorbit:3000
       BOOKORBIT_PUBLIC_URL: https://books.example.org
-      BOOKORBIT_USER: ${BOOKORBIT_USER}
-      BOOKORBIT_PASSWORD: ${BOOKORBIT_PASSWORD}
+      BOOKORBIT_API_KEY: ${BOOKORBIT_API_KEY}
       EPUB_CHECK_ENABLED: "true"
       EPUB_CHECK_REPORT_URL: http://192.168.1.10:8602
 
@@ -66,7 +65,8 @@ Shared by the features:
 |---|---|---|
 | `BOOKORBIT_URL` | required by EPUB Check and PocketBook Sync | BookOrbit base URL as orbitkit reaches it, without `/api/…`; in the same stack e.g. `http://bookorbit:3000`. |
 | `BOOKORBIT_PUBLIC_URL` | `BOOKORBIT_URL` | Where your browser reaches BookOrbit, for links. Set it when `BOOKORBIT_URL` is an internal address. |
-| `BOOKORBIT_USER`, `BOOKORBIT_PASSWORD` | required by EPUB Check | A BookOrbit web login (not the KOReader one), see [BookOrbit user](#bookorbit-user). |
+| `BOOKORBIT_API_KEY` | required by EPUB Check, or the two below | A BookOrbit API key (BookOrbit 3.8 or newer), see [BookOrbit access](#bookorbit-access). |
+| `BOOKORBIT_USER`, `BOOKORBIT_PASSWORD` | | A BookOrbit web login (not the KOReader one), for EPUB Check without an API key. |
 | `DATA_DIR` | `/data` | Where each feature keeps its folder: `epub-check/`, `pocketbook-sync/`, `opds-proxy/`. |
 
 The settings of each feature, including its dry run, are in its section below.
@@ -129,22 +129,31 @@ EPUB Check doesn't change books in BookOrbit unless you turn on `EPUB_CHECK_REPL
 by default repairs only touch the copy you download. epubsana fixes the defects that have exactly one correct repair;
 the rest (like a broken link whose target is unclear) is a job for Sigil or calibre.
 
-### BookOrbit user
+### BookOrbit access
 
-EPUB Check logs in like BookOrbit's apps do, with a normal BookOrbit user (`BOOKORBIT_USER`, not KOReader
-credentials). An admin works; a user of its own is tidier. It needs access to the libraries to check and these
-permissions:
+EPUB Check uses BookOrbit's web API, with an **API key** (BookOrbit 3.8 or newer) or, without one, a **login**. A key
+is the better choice: there is no password in orbitkit's settings, you can narrow it down to what EPUB Check needs, and
+revoke it on its own.
 
-- **download** (`library_download`), to read the files,
-- **edit metadata** (`library_edit_metadata`), to set the custom fields. BookOrbit also requires the Editor or
+The key, or the user, needs access to the libraries to check and these permissions:
+
+- **Download books** (`library_download`), to read the files,
+- **Edit metadata** (`library_edit_metadata`), to set the custom fields. BookOrbit also requires the Editor or
   Owner role on each library for that (*Settings → Libraries → Access*),
-- **manage libraries** (`manage_libraries`), to create the custom fields on the first run and to ask for a library
+- **Manage libraries** (`manage_libraries`), to create the custom fields on the first run and to ask for a library
   scan after replacing a book. Without it, create the fields from the table above yourself (same labels and types),
   and EPUB Check uses them.
 
-orbitkit keeps a session like BookOrbit's apps (shown as *orbitkit* among the user's sessions) in
-`epub-check/state.json` (mode `0600`), so it does not log in on every run. Revoking the session there makes it log in
-again with the password.
+**API key:** create one under *Settings → You → API keys* with access **Read and write** and the three permissions
+above, limited to the libraries to check if you like, and set it as `BOOKORBIT_API_KEY`. A key acts as the user who
+created it and can do at most what that user can; an admin's key works, a key of a user of its own is tidier. That
+user needs the *Create API keys* permission, and API keys must be allowed under *Settings → Admin → API keys*. With a
+key, `BOOKORBIT_USER` and `BOOKORBIT_PASSWORD` are not used.
+
+**Login:** without a key, EPUB Check logs in like BookOrbit's apps do, with a normal BookOrbit user (`BOOKORBIT_USER`
+and `BOOKORBIT_PASSWORD`, not KOReader credentials). orbitkit keeps a session like BookOrbit's apps (shown as
+*orbitkit* among the user's sessions) in `epub-check/state.json` (mode `0600`), so it does not log in on every run.
+Revoking the session there makes it log in again with the password.
 
 ### Settings
 
@@ -539,8 +548,8 @@ With `EPUB_CHECK_FIXES` on, EPUB Check checks every book once more after the mov
   [Signing in](#signing-in-to-the-report-pages)). Session cookies are random, HttpOnly and SameSite=Strict; forms
   posted from other sites are refused; ten failed logins from one address make it wait 15 minutes, on top of
   BookOrbit's own lockout. Passwords typed on the login page are only sent on to BookOrbit. Use HTTPS (a reverse proxy)
-  if the port is reachable from outside your network. The BookOrbit password of `BOOKORBIT_USER` is only sent to
-  BookOrbit; its session is kept in `epub-check/state.json` (mode `0600`).
+  if the port is reachable from outside your network. `BOOKORBIT_API_KEY`, or else the password of `BOOKORBIT_USER`,
+  is only sent to BookOrbit; a login's session is kept in `epub-check/state.json` (mode `0600`).
 - **OPDS Proxy reader URLs are the credential.** Anyone who knows one can browse and download as its account. Tokens
   are ~78 bits, lowercase and without look-alike characters so they can be typed on an e-reader keyboard. Give each
   device its own URL and revoke it when a device is lost. The admin UI has its own password (argon2id), rate-limited
@@ -564,7 +573,7 @@ bun run typecheck
 bun run build       # standalone executable in dist/, as used in the Docker image
 
 # One EPUB Check cycle against a real BookOrbit, changing nothing (state in ./data)
-EPUB_CHECK_ENABLED=true EPUB_CHECK_DRY_RUN=true BOOKORBIT_URL=… BOOKORBIT_USER=… BOOKORBIT_PASSWORD=… bun run once
+EPUB_CHECK_ENABLED=true EPUB_CHECK_DRY_RUN=true BOOKORBIT_URL=… BOOKORBIT_API_KEY=… bun run once
 
 # Crawl a running OPDS Proxy like a reader would; reports broken or leaking links
 bun run opds-crawl http://localhost:8601/<token>/ --search whale

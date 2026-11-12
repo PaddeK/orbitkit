@@ -3,6 +3,8 @@ import type { Shared } from "../config.ts";
 
 export interface Config {
     bookorbitUrl: string;
+    /** BOOKORBIT_API_KEY; without it, orbitkit logs in with BOOKORBIT_USER and BOOKORBIT_PASSWORD */
+    bookorbitApiKey?: string;
     bookorbitUser: string;
     bookorbitPassword: string;
     /** Where browsers reach BookOrbit, for links on the report pages; BOOKORBIT_URL may be an internal address */
@@ -44,6 +46,7 @@ export function epubCheckConfig(settings: Settings, shared: Shared): Config {
     }
     return {
         bookorbitUrl: bookorbit.url,
+        bookorbitApiKey: bookorbit.apiKey,
         bookorbitUser: bookorbit.user,
         bookorbitPassword: bookorbit.password,
         bookorbitPublicUrl: bookorbit.publicUrl,

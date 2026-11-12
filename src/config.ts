@@ -11,15 +11,18 @@ export interface BookOrbitSettings {
     url: string;
     /** How browsers reach BookOrbit, for links; BOOKORBIT_URL unless set */
     publicUrl: string;
-    /** BookOrbit web login, for features that use the web API */
+    /** BookOrbit API key (BookOrbit 3.8+), for features that use the web API; preferred over user and password */
+    apiKey?: string;
+    /** BookOrbit web login, the fallback without an API key */
     user: string;
+
     password: string;
 }
 
 /** What every feature may use. */
 export interface Shared {
     dataDir: string;
-    /** BOOKORBIT_*; `login` makes BOOKORBIT_USER and BOOKORBIT_PASSWORD required */
+    /** BOOKORBIT_*; `login` requires BOOKORBIT_API_KEY, or else BOOKORBIT_USER and BOOKORBIT_PASSWORD */
     bookorbit(login: boolean): BookOrbitSettings;
 }
 
@@ -84,9 +87,15 @@ export function loadConfig(env: Env = process.env): Config {
                 password: "",
             };
             bookorbit.publicUrl ||= bookorbit.url;
-            if (login && !bookorbit.user) {
-                bookorbit.user = settings.get("BOOKORBIT_USER", true) ?? "";
-                bookorbit.password = settings.get("BOOKORBIT_PASSWORD", true) ?? "";
+            if (login && !bookorbit.apiKey && !bookorbit.user) {
+                bookorbit.apiKey = settings.get("BOOKORBIT_API_KEY");
+                if (bookorbit.apiKey && !bookorbit.apiKey.startsWith("bok_")) {
+                    throw new ConfigError("BOOKORBIT_API_KEY is not a BookOrbit API key, which starts with bok_ (Settings > You > API keys in BookOrbit 3.8 or newer)");
+                }
+                if (!bookorbit.apiKey) {
+                    bookorbit.user = settings.get("BOOKORBIT_USER", true) ?? "";
+                    bookorbit.password = settings.get("BOOKORBIT_PASSWORD", true) ?? "";
+                }
             }
             return bookorbit;
         },

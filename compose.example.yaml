@@ -16,9 +16,11 @@ services:
       BOOKORBIT_URL: http://bookorbit:3000
       # Where your browser reaches BookOrbit, for links
       BOOKORBIT_PUBLIC_URL: https://books.example.org
-      # A BookOrbit web login, used by EPUB Check (see the README for its permissions)
-      BOOKORBIT_USER: ${BOOKORBIT_USER}
-      BOOKORBIT_PASSWORD: ${BOOKORBIT_PASSWORD}
+      # A BookOrbit API key (BookOrbit 3.8+), used by EPUB Check (see the README for its permissions)
+      BOOKORBIT_API_KEY: ${BOOKORBIT_API_KEY}
+      # Or, without a key, a BookOrbit web login
+      # BOOKORBIT_USER: ${BOOKORBIT_USER}
+      # BOOKORBIT_PASSWORD: ${BOOKORBIT_PASSWORD}
 
       # EPUB Check
       EPUB_CHECK_ENABLED: "true"

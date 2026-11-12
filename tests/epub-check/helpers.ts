@@ -6,6 +6,7 @@ import type { Config } from "../../src/epub-check/config.ts";
 
 export const USER = "reader";
 export const PASSWORD = "bo-secret";
+export const API_KEY = "bok_epub-check-test-key";
 
 interface FakeBook extends Book {
     /** File contents by file ID */
@@ -81,7 +82,8 @@ export function startFakeBookOrbit() {
                 fake.refreshes++;
                 return json(issue());
             }
-            if (req.headers.get("authorization") !== `Bearer ${fake.accessToken}`) return json({ message: "Unauthorized" }, 401);
+            const authorization = req.headers.get("authorization");
+            if (authorization !== `Bearer ${fake.accessToken}` && authorization !== `Bearer ${API_KEY}`) return json({ message: "Unauthorized" }, 401);
 
             if (path === "/auth/me") return json({ id: 1, username: USER, isSuperuser: false, permissions: fake.permissions });
             if (path === "/libraries") return json([{ id: 1, name: "Books" }, { id: 2, name: "Comics" }]);

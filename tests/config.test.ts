@@ -26,12 +26,18 @@ test("nothing runs unless a feature is turned on", () => {
     expect(() => loadConfig({ EPUB_CHECK_ENABLED: "maybe" })).toThrow("true or false");
 });
 
+test("EPUB Check: an API key makes user and password unnecessary", () => {
+    const epubCheck = loadConfig({ EPUB_CHECK_ENABLED: "true", BOOKORBIT_URL: "https://books.example.org", BOOKORBIT_API_KEY: "bok_abc" }).epubCheck!;
+    expect(epubCheck).toMatchObject({ bookorbitApiKey: "bok_abc", bookorbitUser: "", bookorbitPassword: "" });
+});
+
 test("EPUB Check: defaults", () => {
     const config = loadConfig(EPUB_CHECK);
     expect(config.pocketbookSync).toBeUndefined();
     expect(config.opdsProxy).toBeUndefined();
     expect(config.epubCheck).toEqual({
         bookorbitUrl: "https://books.example.org",
+        bookorbitApiKey: undefined,
         bookorbitUser: "reader",
         bookorbitPassword: "bo-secret",
         bookorbitPublicUrl: "https://books.example.org",
@@ -91,6 +97,7 @@ test("invalid values are rejected", () => {
     expect(() => loadConfig({ ...EPUB_CHECK, EPUB_CHECK_BASE_PATH: "/api/../x" })).toThrow("EPUB_CHECK_BASE_PATH");
     expect(() => loadConfig({ ...EPUB_CHECK, EPUB_CHECK_BASE_PATH: "/api/<x>" })).toThrow("EPUB_CHECK_BASE_PATH");
     expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_INTERVAL: "5" })).toThrow("at least 30");
+    expect(() => loadConfig({ ...EPUB_CHECK, BOOKORBIT_API_KEY: "secret" })).toThrow("starts with bok_");
     expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_DEVICE_ID: "my device!" })).toThrow("letters, digits and hyphens");
     expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_SHELF: "PocketBook" })).toThrow("Missing required settings: POCKETBOOK_SYNC_BOOKORBIT_API_KEY");
     expect(() => loadConfig({ ...POCKETBOOK_SYNC, POCKETBOOK_SYNC_SHELF: "PocketBook", POCKETBOOK_SYNC_BOOKORBIT_API_KEY: "secret" })).toThrow("starts with bok_");

@@ -3,7 +3,7 @@ import { Checker, FIELDS, reportPath, type FileReport } from "../../src/epub-che
 import type { Config } from "../../src/epub-check/config.ts";
 import { State } from "../../src/epub-check/state.ts";
 import { brokenEpub, repairableEpub, validEpub } from "./epub.ts";
-import { addBook, addField, makeConfig, replaceFile, startFakeBookOrbit, valueOf, type FakeBookOrbit } from "./helpers.ts";
+import { API_KEY, addBook, addField, makeConfig, replaceFile, startFakeBookOrbit, valueOf, type FakeBookOrbit } from "./helpers.ts";
 
 let fake: FakeBookOrbit;
 let config: Config;
@@ -202,6 +202,18 @@ test("a lost session falls back to the password", async () => {
     fake.refreshToken = "f".repeat(64);
     await run();
     expect(fake.logins).toBe(2);
+});
+
+test("an API key replaces the login", async () => {
+    addBook(fake, { id: 1, title: "Moby Dick", epubs: [validEpub()] });
+    await run({ ...config, bookorbitApiKey: API_KEY, bookorbitUser: "", bookorbitPassword: "" });
+    expect(fake.logins).toBe(0);
+    expect(valueOf(fake, 1, "EPUB check")).toBe("valid");
+});
+
+test("a refused API key is a clear error, without falling back to a login", async () => {
+    await expect(run({ ...config, bookorbitApiKey: "bok_revoked" })).rejects.toThrow("BookOrbit refused the API key");
+    expect(fake.logins).toBe(0);
 });
 
 test("a wrong password is a clear error", async () => {

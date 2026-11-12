@@ -84,7 +84,7 @@ export class Checker {
         this.checkedWith = `epubveri ${epubveriVersion}, epubsana ${epubsanaVersion}`
             + `${config.ownFixes ? `, orbitkit fixes ${OWN_FIXES.map((f) => f.key).join(" ")}` : ""}`
             + `${epublift ? `, epublift ${epublift.version}` : ""}`;
-        this.bookorbit = new BookOrbit(config.bookorbitUrl, {
+        this.bookorbit = new BookOrbit(config.bookorbitUrl, config.bookorbitApiKey ? { apiKey: config.bookorbitApiKey } : {
             user: config.bookorbitUser,
             password: config.bookorbitPassword,
             session: state.data.session,
@@ -232,7 +232,8 @@ export class Checker {
         } catch (err) {
             if (!(err instanceof HttpError && err.status === 403)) throw err;
             const labels = this.wantedFields().map((key) => `"${FIELDS[key].label}" (${FIELDS[key].type})`).join(", ");
-            throw new Error(`BOOKORBIT_USER may not manage custom fields. Give it the "Manage libraries" permission,`
+            const who = this.config.bookorbitApiKey ? "BOOKORBIT_API_KEY" : "BOOKORBIT_USER";
+            throw new Error(`${who} may not manage custom fields. Give it the "Manage libraries" permission,`
                 + ` or create these fields in BookOrbit yourself: ${labels}`);
         }
     }
