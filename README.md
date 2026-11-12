@@ -42,7 +42,7 @@ volumes:
 Then `docker logs -f orbitkit`. Every line names the feature it comes from:
 
 ```
-2026-10-30 12:00:00 INFO orbitkit 1.0.0 with epub-check, pocketbook-sync, opds-proxy
+2026-10-30 12:00:00 INFO orbitkit 1.1.0 with epub-check, pocketbook-sync, opds-proxy
 2026-10-30 12:00:00 INFO [epub-check] epubveri 0.35.0+16d7735, epubsana 0.36.0+73dd926; checking every 300s
 2026-10-30 12:00:00 INFO [epub-check] reports on port 8602 (BookOrbit login with "Manage libraries" required), linked in BookOrbit as http://192.168.1.10:8602
 2026-10-30 12:00:00 INFO [pocketbook-sync] syncing every 300s as device "PocketBook Era Color"
