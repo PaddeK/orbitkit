@@ -5,7 +5,7 @@ import { log } from "./log.ts";
 import { State } from "./state.ts";
 import { Bridge } from "./sync.ts";
 
-/** PocketBook Sync: sends the percentages read on PocketBook readers to BookOrbit. */
+/** PocketBook Sync: sends the percentages read on PocketBook readers to BookOrbit, and the books of a shelf to the readers. */
 export async function createPocketbookSync(config: Config): Promise<Feature> {
     const state = await State.open(config.dataDir);
     const bridge = new Bridge(config, state);
@@ -20,6 +20,12 @@ export async function createPocketbookSync(config: Config): Promise<Feature> {
                 (err) => log.error(err instanceof HttpError
                     ? `BookOrbit KOReader sync login failed, check BOOKORBIT_URL, POCKETBOOK_SYNC_KOREADER_USER and POCKETBOOK_SYNC_KOREADER_PASSWORD: ${err.message}`
                     : `BookOrbit is not reachable: ${(err as Error).message}`));
+            if (bridge.shelf) {
+                const shelf = config.shelf!;
+                void bridge.shelf.bookorbit.checkAuth().then(
+                    (user) => log.info(`sending the BookOrbit shelf "${shelf.name}" of ${user} to the PocketBook collection "${shelf.cloudCollection}"`),
+                    (err) => log.error(`BookOrbit refused POCKETBOOK_SYNC_BOOKORBIT_API_KEY, the shelf is not sent: ${(err as Error).message}`));
+            }
             loop = every(config.syncInterval, log, () => bridge.cycle());
         },
         async once() {

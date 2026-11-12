@@ -2,6 +2,16 @@ import { ConfigError, type Settings } from "../settings.ts";
 import type { Shared } from "../config.ts";
 import { DEFAULT_URL as POCKETBOOK_URL } from "./pocketbook.ts";
 
+/** Sending the books of a BookOrbit shelf to PocketBook Cloud (POCKETBOOK_SYNC_SHELF). */
+export interface ShelfConfig {
+    /** The BookOrbit collection */
+    name: string;
+    /** BookOrbit API key of the shelf's owner: read access with "Download books" is enough */
+    apiKey: string;
+    /** The PocketBook Cloud collection the books go into, shown as a shelf on the reader */
+    cloudCollection: string;
+}
+
 export interface Config {
     pbEmail: string;
     pbPassword: string;
@@ -18,8 +28,9 @@ export interface Config {
     /** Seconds */
     syncInterval: number;
     dataDir: string;
-    /** Log the progress that would be sent instead of sending it (POCKETBOOK_SYNC_DRY_RUN) */
+    /** Log the progress that would be sent and the books that would be uploaded instead (POCKETBOOK_SYNC_DRY_RUN) */
     dryRun: boolean;
+    shelf?: ShelfConfig;
 }
 
 const MIN_SYNC_INTERVAL = 30;
@@ -29,6 +40,19 @@ export function pocketbookSyncConfig(settings: Settings, shared: Shared): Config
     const deviceId = settings.get("POCKETBOOK_SYNC_DEVICE_ID");
     if (deviceId && !/^[A-Za-z0-9-]{1,100}$/.test(deviceId)) {
         throw new ConfigError("POCKETBOOK_SYNC_DEVICE_ID may only contain letters, digits and hyphens (BookOrbit's rule)");
+    }
+    let shelf: ShelfConfig | undefined;
+    const shelfName = settings.get("POCKETBOOK_SYNC_SHELF");
+    if (shelfName) {
+        const apiKey = settings.get("POCKETBOOK_SYNC_BOOKORBIT_API_KEY", true) ?? "";
+        if (apiKey && !apiKey.startsWith("bok_")) {
+            throw new ConfigError("POCKETBOOK_SYNC_BOOKORBIT_API_KEY is not a BookOrbit API key, which starts with bok_ (Settings > You > API keys in BookOrbit 3.8 or newer)");
+        }
+        const cloudCollection = settings.get("POCKETBOOK_SYNC_CLOUD_COLLECTION") ?? shelfName;
+        if (cloudCollection.length < 3 || cloudCollection.length > 255) {
+            throw new ConfigError(`PocketBook Cloud collection names have 3 to 255 characters; set POCKETBOOK_SYNC_CLOUD_COLLECTION to use another name than "${cloudCollection}"`);
+        }
+        shelf = { name: shelfName, apiKey, cloudCollection };
     }
     return {
         pbEmail: settings.get("POCKETBOOK_SYNC_EMAIL", true) ?? "",
@@ -43,5 +67,6 @@ export function pocketbookSyncConfig(settings: Settings, shared: Shared): Config
         syncInterval: settings.whole("POCKETBOOK_SYNC_INTERVAL", 300, MIN_SYNC_INTERVAL),
         dataDir: `${shared.dataDir}/pocketbook-sync`,
         dryRun: settings.flag("POCKETBOOK_SYNC_DRY_RUN"),
+        shelf,
     };
 }

@@ -17,11 +17,15 @@ export interface RequestOptions {
     form?: Record<string, string>;
     /** Sent as JSON */
     json?: unknown;
+    /** Sent as it is, e.g. a file */
+    body?: Uint8Array<ArrayBuffer>;
+    /** Instead of the default of 60 seconds */
+    timeoutMs?: number;
 }
 
 async function send(method: string, url: string, options: RequestOptions, timeoutMs: number): Promise<Response> {
     const headers: Record<string, string> = { "user-agent": USER_AGENT, ...options.headers };
-    let body: string | undefined;
+    let body: string | Uint8Array<ArrayBuffer> | undefined = options.body;
     if (options.form) {
         body = new URLSearchParams(options.form).toString();
         headers["content-type"] = "application/x-www-form-urlencoded";
@@ -29,7 +33,7 @@ async function send(method: string, url: string, options: RequestOptions, timeou
         body = JSON.stringify(options.json);
         headers["content-type"] = "application/json";
     }
-    const res = await fetch(url, { method, headers, body, signal: AbortSignal.timeout(timeoutMs) });
+    const res = await fetch(url, { method, headers, body, signal: AbortSignal.timeout(options.timeoutMs ?? timeoutMs) });
     if (!res.ok) throw new HttpError(res.status, await res.text(), url);
     return res;
 }
@@ -38,6 +42,11 @@ async function send(method: string, url: string, options: RequestOptions, timeou
 export async function requestJson<T>(method: string, url: string, options: RequestOptions = {}): Promise<T> {
     const text = await (await send(method, url, options, JSON_TIMEOUT_MS)).text();
     return (text ? JSON.parse(text) : null) as T;
+}
+
+/** Send a request and return the response body as text. */
+export async function requestText(method: string, url: string, options: RequestOptions = {}): Promise<string> {
+    return (await send(method, url, options, JSON_TIMEOUT_MS)).text();
 }
 
 /** The file name from a Content-Disposition header, preferring the UTF-8 form. */

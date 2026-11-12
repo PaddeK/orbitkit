@@ -12,12 +12,27 @@ export interface BookState {
     sent?: { percent: number; mtime?: number };
 }
 
+/** A book on the BookOrbit shelf, keyed by its BookOrbit ID. */
+export interface ShelfEntry {
+    title: string;
+    /** The BookOrbit file sent, or the one that was skipped */
+    fileId?: number;
+    /** Its fast_hash in PocketBook Cloud, once it is there */
+    fastHash?: string;
+    /** Whether it was put into the cloud collection */
+    collected?: boolean;
+    /** Why this file is not sent, e.g. a format PocketBook does not take; tried again when the book gets another file */
+    skipped?: string;
+}
+
 export interface StateData {
     version: 1;
     /** Device ID reported to BookOrbit */
     deviceId?: string;
     pocketbook: Tokens;
     books: Record<string, BookState>;
+    /** The books of the shelf sent to PocketBook Cloud (POCKETBOOK_SYNC_SHELF) */
+    shelf?: Record<string, ShelfEntry>;
     /** Epoch milliseconds of the last successful sync cycle, for the healthcheck */
     lastSuccess?: number;
 }

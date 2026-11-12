@@ -1,4 +1,4 @@
-import { HttpError, requestJson, stream } from "../http.ts";
+import { HttpError, requestJson, requestText, stream } from "../http.ts";
 import { log } from "./log.ts";
 
 /** Client for the (unofficial) PocketBook Cloud API, as used by cloud.pocketbook.digital. */
@@ -10,6 +10,10 @@ const CLIENT_SECRET = "K3YYSjCgDJNoWKdGVOyO1mrROp3MMZqqRNXNXTmh";
 const PAGE_SIZE = 100;
 /** Renew the access token this long before PocketBook says it expires. */
 const EXPIRY_MARGIN_MS = 120_000;
+/** For one upload request with the whole file */
+const UPLOAD_TIMEOUT_MS = 600_000;
+/** Recorded as where the book came from */
+const UPLOAD_SOURCE = "bookorbit";
 
 /** A book in the cloud library, as far as the bridge uses it. */
 export interface CloudBook {
@@ -36,6 +40,14 @@ export interface CloudBook {
     metadata?: { title?: string; authors?: string | null };
     /** Signed download URL */
     link?: string;
+}
+
+/** A file in the cloud after an upload. */
+export interface UploadedFile {
+    /** The cloud may change it, e.g. spaces into dashes */
+    name: string;
+    fast_hash: string;
+    bytes?: number;
 }
 
 /**
@@ -103,6 +115,42 @@ export class PocketBookCloud {
         if (!book.link) throw new PocketBookError(`no download link for ${book.title}`);
         const link = book.link;
         await this.authorized((headers) => stream(link, sink, headers));
+    }
+
+    /**
+     * Upload a file into the cloud library; it reaches the reader with its next sync. Throws HttpError 409 if the
+     * cloud has the same file already, 415 for a format it doesn't take and 507 when the account's storage is full.
+     *
+     * Always in one request: the API also takes chunks, but wants PocketBook's fast hash of the whole file with the
+     * first one, and how that is computed is not documented.
+     */
+    async upload(name: string, bytes: Uint8Array<ArrayBuffer>): Promise<UploadedFile> {
+        const url = `${this.base}/files/${encodeURIComponent(name)}?${new URLSearchParams({ source: UPLOAD_SOURCE })}`;
+        const file = await this.authorized((headers) => requestJson<UploadedFile>("PUT", url, {
+            headers: { ...headers, "content-type": "application/octet-stream" },
+            body: bytes,
+            timeoutMs: UPLOAD_TIMEOUT_MS,
+        }));
+        if (!file?.fast_hash) throw new PocketBookError(`PocketBook Cloud did not confirm the upload of ${name}`);
+        if (file.bytes !== undefined && Number(file.bytes) !== bytes.length) {
+            throw new PocketBookError(`PocketBook Cloud received ${file.bytes} of ${bytes.length} bytes of ${name}`);
+        }
+        return file;
+    }
+
+    /** Put a cloud file into a collection, which the reader shows as a shelf; the collection is created if needed. */
+    async addToCollection(collection: string, fastHash: string): Promise<void> {
+        const name = encodeURIComponent(collection);
+        const add = () => this.authorized((headers) =>
+            requestText("POST", `${this.base}/collections/${name}/files?${new URLSearchParams({ fast_hash: fastHash })}`, { headers, json: {} }));
+        try {
+            await add();
+        } catch (err) {
+            if (!(err instanceof HttpError && err.status === 404)) throw err;
+            await this.authorized((headers) => requestText("POST", `${this.base}/collections/${name}`, { headers, json: { name: collection } }));
+            log.info(`created the collection "${collection}" in PocketBook Cloud`);
+            await add();
+        }
     }
 
     /** Run call with auth headers; on a 401 treat the access token as expired and retry once. */

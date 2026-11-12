@@ -37,6 +37,12 @@ export interface BookDetail {
 
 export type FieldType = "text" | "url" | "number" | "date" | "boolean";
 
+/** A collection ("shelf") in BookOrbit; each belongs to one user. */
+export interface Collection {
+    id: number;
+    name: string;
+}
+
 export interface Field {
     id: number;
     label: string;
@@ -51,7 +57,20 @@ interface Credentials {
     user?: { username: string };
 }
 
+/** How orbitkit signs in: as a user with a password, like BookOrbit's apps, or with an API key (BookOrbit 3.8+). */
+export type Auth =
+    | {
+        user: string;
+        password: string;
+        session: Session;
+        /** Called whenever the session changes, to persist it: refresh tokens are single-use */
+        onSession: () => Promise<void>;
+    }
+    | { apiKey: string };
+
 const PAGE_SIZE = 200;
+/** BookOrbit's limit for collection pages */
+const COLLECTION_PAGE_SIZE = 100;
 /** Renew this long before the access token runs out */
 const EXPIRY_MARGIN_MS = 60_000;
 
@@ -60,14 +79,7 @@ export class BookOrbit {
     private readonly api: string;
     private renewal?: Promise<string>;
 
-    /** `onSession` is called whenever the session changes, to persist it: refresh tokens are single-use. */
-    constructor(
-        readonly url: string,
-        private readonly user: string,
-        private readonly password: string,
-        private readonly session: Session,
-        private readonly onSession: () => Promise<void>,
-    ) {
+    constructor(readonly url: string, private readonly auth: Auth) {
         this.api = `${url}/api/v1`;
     }
 
@@ -81,15 +93,26 @@ export class BookOrbit {
     }
 
     /** Every book the user can see, with its files. */
-    async books(): Promise<Book[]> {
+    books(): Promise<Book[]> {
+        return this.queryAll("/books/query", PAGE_SIZE, [{ field: "addedAt", dir: "asc" }]);
+    }
+
+    /** The user's own collections and the public ones of others. */
+    collections(): Promise<Collection[]> {
+        return this.authorized("GET", "/collections");
+    }
+
+    /** The books of a collection in its order, with their files. */
+    collectionBooks(collectionId: number): Promise<Book[]> {
+        return this.queryAll(`/collections/${collectionId}/books/query`, COLLECTION_PAGE_SIZE, [{ field: "collectionOrder", dir: "asc" }]);
+    }
+
+    private async queryAll(path: string, size: number, sort: { field: string; dir: "asc" | "desc" }[]): Promise<Book[]> {
         const books: Book[] = [];
         for (let page = 0; ; page++) {
-            const result = await this.authorized<{ items: Book[]; total: number }>("POST", "/books/query", {
-                sort: [{ field: "addedAt", dir: "asc" }],
-                pagination: { page, size: PAGE_SIZE },
-            });
+            const result = await this.authorized<{ items: Book[]; total: number }>("POST", path, { sort, pagination: { page, size } });
             books.push(...result.items);
-            if (result.items.length < PAGE_SIZE || books.length >= result.total) return books;
+            if (result.items.length < size || books.length >= result.total) return books;
         }
     }
 
@@ -144,17 +167,20 @@ export class BookOrbit {
             return await request();
         } catch (err) {
             if (!(err instanceof HttpError && err.status === 401)) throw err;
-            this.session.expiresAt = 0;
+            // A refused key stays refused
+            if ("apiKey" in this.auth) throw new HttpError(401, "BookOrbit refused the API key: it may be revoked or expired, or API keys are turned off", `${this.api}/`);
+            this.auth.session.expiresAt = 0;
             return request();
         }
     }
 
     private async headers(): Promise<Record<string, string>> {
-        return { authorization: `Bearer ${await this.accessToken()}` };
+        return { authorization: `Bearer ${"apiKey" in this.auth ? this.auth.apiKey : await this.accessToken()}` };
     }
 
     private async accessToken(): Promise<string> {
-        if (this.session.accessToken && (this.session.expiresAt ?? 0) > Date.now() + EXPIRY_MARGIN_MS) return this.session.accessToken;
+        const auth = this.passwordAuth();
+        if (auth.session.accessToken && (auth.session.expiresAt ?? 0) > Date.now() + EXPIRY_MARGIN_MS) return auth.session.accessToken;
         // The check loop and the report pages share the session: renew it once, since a refresh token works only once
         this.renewal ??= this.renew().finally(() => {
             this.renewal = undefined;
@@ -162,11 +188,17 @@ export class BookOrbit {
         return this.renewal;
     }
 
+    private passwordAuth(): Extract<Auth, { password: string }> {
+        if ("apiKey" in this.auth) throw new Error("signed in with an API key");
+        return this.auth;
+    }
+
     private async renew(): Promise<string> {
+        const { session, onSession } = this.passwordAuth();
         let credentials: Credentials | undefined;
-        if (this.session.refreshToken) {
+        if (session.refreshToken) {
             credentials = await requestJson<Credentials>("POST", `${this.api}/auth/refresh`, {
-                json: { refreshToken: this.session.refreshToken },
+                json: { refreshToken: session.refreshToken },
             }).catch((err) => {
                 // An expired or revoked refresh token: fall back to the password
                 if (err instanceof HttpError && (err.status === 401 || err.status === 400)) return undefined;
@@ -174,18 +206,19 @@ export class BookOrbit {
             });
         }
         credentials ??= await this.login();
-        this.session.accessToken = credentials.accessToken;
-        this.session.expiresAt = Date.parse(credentials.accessTokenExpiresAt);
-        this.session.refreshToken = credentials.refreshToken;
-        await this.onSession();
+        session.accessToken = credentials.accessToken;
+        session.expiresAt = Date.parse(credentials.accessTokenExpiresAt);
+        session.refreshToken = credentials.refreshToken;
+        await onSession();
         return credentials.accessToken;
     }
 
     private async login(): Promise<Credentials> {
+        const { user, password } = this.passwordAuth();
         try {
             return await requestJson<Credentials>("POST", `${this.api}/auth/login`, {
                 // "native" returns the refresh token in the body instead of a browser cookie
-                json: { username: this.user, password: this.password, clientKind: "native", deviceLabel: "orbitkit" },
+                json: { username: user, password, clientKind: "native", deviceLabel: "orbitkit" },
             });
         } catch (err) {
             if (err instanceof HttpError && err.status === 401) {

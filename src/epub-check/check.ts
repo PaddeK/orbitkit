@@ -84,8 +84,12 @@ export class Checker {
         this.checkedWith = `epubveri ${epubveriVersion}, epubsana ${epubsanaVersion}`
             + `${config.ownFixes ? `, orbitkit fixes ${OWN_FIXES.map((f) => f.key).join(" ")}` : ""}`
             + `${epublift ? `, epublift ${epublift.version}` : ""}`;
-        this.bookorbit = new BookOrbit(config.bookorbitUrl, config.bookorbitUser, config.bookorbitPassword, state.data.session, () =>
-            state.save());
+        this.bookorbit = new BookOrbit(config.bookorbitUrl, {
+            user: config.bookorbitUser,
+            password: config.bookorbitPassword,
+            session: state.data.session,
+            onSession: () => state.save(),
+        });
     }
 
     async cycle(): Promise<void> {
