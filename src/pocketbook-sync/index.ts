@@ -24,7 +24,10 @@ export async function createPocketbookSync(config: Config): Promise<Feature> {
                 const collection = config.collection!;
                 void bridge.collection.bookorbit.checkAuth().then(
                     (user) => log.info(`sending the BookOrbit collection "${collection.name}" of ${user} to the PocketBook collection "${collection.cloudCollection}"`),
-                    (err) => log.error(`BookOrbit refused POCKETBOOK_SYNC_BOOKORBIT_API_KEY, the collection is not sent: ${(err as Error).message}`));
+                    (err) => {
+                        // Unreachable is said above already; the collection is tried again every cycle
+                        if (err instanceof HttpError) log.error(`BookOrbit refused POCKETBOOK_SYNC_BOOKORBIT_API_KEY, the collection is not sent: ${err.message}`);
+                    });
             }
             loop = every(config.syncInterval, log, () => bridge.cycle());
         },
