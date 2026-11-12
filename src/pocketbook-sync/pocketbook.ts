@@ -17,10 +17,15 @@ export interface CloudBook {
     title: string;
     /** e.g. "epub", "pdf" */
     format?: string;
-    /** PocketBook's own file ID */
+    /** PocketBook's own file ID; the full-file MD5 only for small files the cloud hashed itself */
     fast_hash: string;
-    /** Full-file MD5, base64 */
+    /**
+     * Base64. It used to be the file's MD5; since November 2026 it is the fast_hash as hex text, so it is no
+     * checksum any more. See md5Mismatch().
+     */
     md5_hash?: string;
+    /** File size */
+    bytes?: number | string;
     /** Whole percent, sometimes sent as a string */
     read_percent?: number | string | null;
     /** "reading", "read", ... */
@@ -31,6 +36,19 @@ export interface CloudBook {
     metadata?: { title?: string; authors?: string | null };
     /** Signed download URL */
     link?: string;
+}
+
+/**
+ * Whether a downloaded file is not the one listed: its size differs, or md5_hash still holds a real MD5 that differs.
+ * md5_hash is usually the fast_hash now, which can't be checked here: PocketBook doesn't document how it computes it.
+ */
+export function md5Mismatch(book: CloudBook, size: number, md5Hex: string): boolean {
+    if (book.bytes !== undefined && book.bytes !== null && Number(book.bytes) !== size) return true;
+    if (!book.md5_hash) return false;
+    const decoded = Buffer.from(book.md5_hash, "base64");
+    // The old form: the raw digest
+    if (decoded.length === 16) return decoded.toString("hex") !== md5Hex;
+    return false;
 }
 
 /** Login state, persisted by the caller so restarts don't need a new login. */

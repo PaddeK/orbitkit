@@ -104,7 +104,9 @@ export function startFakeServices() {
                 title,
                 format: "epub",
                 fast_hash: fastHash,
-                md5_hash: md5(data, "base64"),
+                // As the real cloud does since November 2026: the fast_hash, not the file's MD5
+                md5_hash: btoa(fastHash),
+                bytes: data.length,
                 read_percent: 0,
                 read_status: "reading",
                 mtime: "2026-10-28T23:15:29Z",

@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { stat } from "node:fs/promises";
 import { koreaderHash } from "../../src/pocketbook-sync/fingerprint.ts";
 import { STATE_FILE, type StateData } from "../../src/pocketbook-sync/state.ts";
@@ -98,15 +99,24 @@ test("dry run sends nothing", async () => {
     expect(fake.progress).toHaveLength(0);
 });
 
-test("retries a download that doesn't match its MD5", async () => {
+test("retries a download that isn't the file listed", async () => {
     const { book } = libraryBook("Moby Dick", 26);
-    const good = book.md5_hash;
-    book.md5_hash = "corrupted";
     const bridge = await env.bridge();
+    book.bytes = 12;
     expect(await bridge.cycle()).toBe(0);
-    book.md5_hash = good;
+    // md5_hash in its old form, a raw MD5, is checked too
+    book.bytes = fake.files.get(book.fast_hash)!.length;
+    book.md5_hash = createHash("md5").update("something else").digest("base64");
+    expect(await bridge.cycle()).toBe(0);
+    book.md5_hash = createHash("md5").update(fake.files.get(book.fast_hash)!).digest("base64");
     expect(await bridge.cycle()).toBe(1);
-    expect(fake.downloads).toBe(2);
+    expect(fake.downloads).toBe(3);
+});
+
+test("md5_hash holding the fast hash, as the cloud sends it now, is no reason to retry", async () => {
+    const { book } = libraryBook("Mona Lisa Overdrive", 12);
+    expect(Buffer.from(book.md5_hash!, "base64").toString()).toBe(book.fast_hash);
+    expect(await (await env.bridge()).cycle()).toBe(1);
 });
 
 test("forgets books removed from the cloud", async () => {

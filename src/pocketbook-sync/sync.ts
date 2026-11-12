@@ -4,7 +4,7 @@ import type { Config } from "./config.ts";
 import { Fingerprint } from "./fingerprint.ts";
 import { HttpError } from "../http.ts";
 import { log } from "./log.ts";
-import { type CloudBook, PocketBookCloud } from "./pocketbook.ts";
+import { type CloudBook, md5Mismatch, PocketBookCloud } from "./pocketbook.ts";
 import type { State } from "./state.ts";
 
 const AUDIO_FORMATS = new Set(["mp3", "m4a", "m4b", "aac", "ogg", "opus", "flac", "wav"]);
@@ -77,8 +77,8 @@ export class Bridge {
                 log.warn(`could not download "${book.title}", will retry next cycle: ${(err as Error).message}`);
                 continue;
             }
-            if (book.md5_hash && fingerprint.md5Base64 !== book.md5_hash) {
-                log.warn(`download of "${book.title}" does not match its MD5, will retry next cycle`);
+            if (md5Mismatch(book, fingerprint.size, fingerprint.md5Hex)) {
+                log.warn(`download of "${book.title}" is not the file PocketBook Cloud lists (size or MD5), will retry next cycle`);
                 continue;
             }
             this.books[book.fast_hash] = { koreaderHash: fingerprint.koreaderHash, title: book.title, matched: false };

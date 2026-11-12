@@ -38,9 +38,14 @@ export class Fingerprint {
         return hash.digest("hex");
     }
 
-    /** Full-file MD5 in the base64 form PocketBook Cloud reports as md5_hash. Read it after the last update(). */
+    /** Full-file MD5 as base64, the form PocketBook Cloud used for md5_hash until November 2026. Read it after the last update(). */
     get md5Base64(): string {
         return this.md5.copy().digest("base64");
+    }
+
+    /** Full-file MD5 as hex. Read it after the last update(). */
+    get md5Hex(): string {
+        return this.md5.copy().digest("hex");
     }
 }
 
